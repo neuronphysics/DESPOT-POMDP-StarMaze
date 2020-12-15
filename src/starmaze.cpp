@@ -47,7 +47,7 @@ public:
         }
 };
 /* =============================================================================
-* SimpleRockSample class
+* StarMaze class
 * =============================================================================*/
 
 StarMazeProblem::StarMazeProblem() {
@@ -206,9 +206,6 @@ int StarMazeProblem::NumActions() const {
     return 8;
 }
 
-/* ================================================
-* Functions related to beliefs and starting states
-* ================================================*/
 
 double StarMazeProblem::ObsProb(OBS_TYPE obs, const State& state,
     ACT_TYPE action) const {
@@ -232,9 +229,9 @@ double StarMazeProblem::ObsProb(OBS_TYPE obs, const State& state,
       return obs == O_NONE;
       }
 }
-/*=====================================*
- *     Bound
- *=====================================*/
+/* ================================================
+* Functions related to beliefs and starting states
+* ================================================*/
 
 State* StarMazeProblem::CreateStartState(string type) const {
   // Always start at the center and time 0 with random belief about the context
@@ -404,6 +401,9 @@ void StarMazeBelief::Update(ACT_TYPE action, OBS_TYPE obs){ // TODO: Not complet
 
 		          delete updated;
 }
+/*=====================================*
+ *     Bound
+ *=====================================*/
 
 ParticleUpperBound* StarMazeProblem::CreateParticleUpperBound(string name) const {
         if (name == "TRIVIAL" || name == "DEFAULT") {
