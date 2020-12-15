@@ -39,7 +39,7 @@ public:
                DefaultPolicy(model, bound) {
         }
 
-        // NOTE: optimal for noise = 0.15
+        // NOTE: optimal action
         ACT_TYPE Action(const vector<State*>& particles, RandomStreams& streams,
                         History& history) const {
 
@@ -51,6 +51,7 @@ public:
 * =============================================================================*/
 
 StarMazeProblem::StarMazeProblem() {
+    
 }
 
 
@@ -64,6 +65,7 @@ bool StarMazeProblem::Step(State& state, double rand_num, ACT_TYPE action,
     int& rat_position = simple_state.rat_position;
     int& context = simple_state.context;
     int& time = simple_state.time;
+    cout<< "Hey you! I am in step functtion ..."<<endl;
     if (time < 4){
        if ( rat_position == CENTER) {
           time    = time + 1;
@@ -187,6 +189,7 @@ bool StarMazeProblem::Step(State& state, double rand_num, ACT_TYPE action,
            reward  = (time==TIME_STEP_4 && (context== C_TOPRIGHT||context== C_RIGHT)) ? -20 : 0;
         }
       }
+      return false;
     }else{
        // The trial finishes at time step greater than 4
        return true;
@@ -212,27 +215,19 @@ double StarMazeProblem::ObsProb(OBS_TYPE obs, const State& state,
       const SimpleState& simple_state = static_cast < const SimpleState& >(state);
       int rat_position = simple_state.rat_position;
       int context = simple_state.context;
+      
       if (action == A_CUE) {
           // when the rat at CUE, its observation is correct with probability 0.98
           return (obs == context-1) ? 0.98 : 0.02;
           //because he first observation is none and the rest is similar to the context
-
-      }else if (action == A_LEFT ){
-         if (context== C_LEFT){
+      }else if (action == A_LEFT && context== C_LEFT){      
             return (obs==O_LEFT);
-         }
-      }else if (action == A_TOPLEFT2 ){
-         if (context== C_TOPLEFT){
+      }else if (action == A_TOPLEFT2 && context== C_TOPLEFT){
             return (obs==O_TOPLEFT);
-         }
-       }else if (action == A_RIGHT ){
-          if (context== C_RIGHT){
+       }else if (action == A_RIGHT && context== C_RIGHT){
              return (obs==O_RIGHT);
-          }
-      }else if (action == A_TOPRIGHT2 ){
-          if (context== C_TOPRIGHT){
+      }else if (action == A_TOPRIGHT2 && context== C_TOPRIGHT){
              return (obs==O_TOPRIGHT);//return 1 if correct and 0 otherwise
-          }
       }else{
       return obs == O_NONE;
       }
@@ -243,13 +238,15 @@ double StarMazeProblem::ObsProb(OBS_TYPE obs, const State& state,
 
 State* StarMazeProblem::CreateStartState(string type) const {
   // Always start at the center and time 0 with random belief about the context
-	return new SimpleState(0, Random::RANDOM.NextInt(4),0);//????
+   
+   return new SimpleState(0, Random::RANDOM.NextInt(4),0);//????
 }
 
 Belief* StarMazeProblem::InitialBelief(const State* start, string type) const {
-        vector<State*> particles;
-
+        
         if (type == "DEFAULT" || type == "PARTICLE") {
+            vector<State*> particles;
+            
             //Allocate() function allocates some space for creating new state;
             SimpleState* left_context = static_cast<SimpleState*>(Allocate(1, 0.5));
             left_context->rat_position = CENTER;
@@ -257,19 +254,19 @@ Belief* StarMazeProblem::InitialBelief(const State* start, string type) const {
             left_context->time         = TIME_STEP_1;
             particles.push_back(left_context);
 
-            SimpleState* topLeft_context = static_cast<SimpleState*>(Allocate(2, 0.5));
+            SimpleState* topLeft_context = static_cast<SimpleState*>(Allocate(1, 0.5));
             topLeft_context->rat_position = CENTER;
             topLeft_context->context      = O_TOPLEFT;//why is it observation not state???
             topLeft_context->time         = TIME_STEP_1;
             particles.push_back(topLeft_context);
 
-            SimpleState* right_context = static_cast<SimpleState*>(Allocate(3, 0.5));//first component is state_id, the second one is weight
+            SimpleState* right_context = static_cast<SimpleState*>(Allocate(1, 0.5));//first component is state_id, the second one is weight
             right_context->rat_position = CENTER;
             right_context->context      = O_RIGHT;//why is it observation not state???
             right_context->time         = TIME_STEP_1;
             particles.push_back(right_context);
 
-            SimpleState* topRight_context = static_cast<SimpleState*>(Allocate(4, 0.5));
+            SimpleState* topRight_context = static_cast<SimpleState*>(Allocate(1, 0.5));
             topRight_context->rat_position = CENTER;
             topRight_context->context      = O_TOPRIGHT;//why is it matched wih observation not state???
             topRight_context->time         = TIME_STEP_1;
