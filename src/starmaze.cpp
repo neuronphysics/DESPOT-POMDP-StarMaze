@@ -16,10 +16,11 @@ namespace despot {
 SimpleState::SimpleState() {
 }
 
-
-SimpleState::SimpleState(int _state_id) {
+/*
+SimpleState::SimpleState(vector<int> _state_id) {
 	state_id = _state_id;
 }
+*/
 SimpleState::~SimpleState() {
 }
 
@@ -30,7 +31,7 @@ string SimpleState::text() const {
 /* =============================================================================
 * OptimalStarMazePolicy class
 * =============================================================================*/
-
+//StarMazeProblem* StarMazeProblem::current_ = NULL;
 class OptimalStarMazePolicy: public DefaultPolicy {
 public:
         
@@ -406,22 +407,24 @@ void StarMazeBelief::Update(ACT_TYPE action, OBS_TYPE obs){ // TODO: Not complet
  *=====================================*/
 
 ParticleUpperBound* StarMazeProblem::CreateParticleUpperBound(string name) const {
-        if (name == "TRIVIAL" || name == "DEFAULT") {
+        if (name == "TRIVIAL" ) {
             return new TrivialParticleUpperBound(this);
-        } else if (name == "MDP") {
+        } else if (name == "MDP"|| name == "DEFAULT") {
             return new MDPUpperBound(this, *this);
         } else {
             cerr << "Unsupported particle lower bound: " << name << endl;
             exit(1);
+            return NULL;
         }
     }
 ScenarioUpperBound* StarMazeProblem::CreateScenarioUpperBound(string name,
         string particle_bound_name) const {
-        ScenarioUpperBound* bound = NULL;
+        
+        const StateIndexer* indexer = this;
         if (name == "TRIVIAL" || name == "DEFAULT") {
-            bound = new TrivialParticleUpperBound(this);
+            return new TrivialParticleUpperBound(this);
         } else if (name == "LOOKAHEAD") {
-            return new LookaheadUpperBound(this, *this,
+            return new LookaheadUpperBound(this, *indexer,
                  CreateParticleUpperBound(particle_bound_name));
 
         } else if (name == "MDP") {
@@ -429,8 +432,8 @@ ScenarioUpperBound* StarMazeProblem::CreateScenarioUpperBound(string name,
         } else {
             cerr << "Unsupported base upper bound: " << name << endl;
             exit(0);
+            return NULL;
         }
-        return bound;
 }
 ScenarioLowerBound* StarMazeProblem::CreateScenarioLowerBound(string name,
                                      string particle_bound_name="DEFAULT") const {
@@ -438,6 +441,7 @@ ScenarioLowerBound* StarMazeProblem::CreateScenarioLowerBound(string name,
 	    const StateIndexer* indexer = this;
 	    const StatePolicy* policy = this;                                 
         ScenarioLowerBound* bound = NULL;
+        cout<<"here lower bound..."<<endl;
         if (name == "TRIVIAL" ) {
             bound = new TrivialParticleLowerBound(this);
         } else if (name == "RANDOM") {
@@ -565,6 +569,7 @@ void StarMazeProblem::PrintAction(ACT_TYPE action, ostream& out) const {
  * =================*/
 
 State* StarMazeProblem::Allocate(int state_id, double weight) const {
+        
         SimpleState* state = memory_pool_.Allocate();
         state->state_id = state_id;
         state->weight = weight;
