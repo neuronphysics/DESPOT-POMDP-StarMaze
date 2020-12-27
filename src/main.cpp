@@ -16,6 +16,7 @@ public:
 
   World* InitializeWorld(std::string&  world_type, DSPOMDP* model, option::Option* options)
   {
+      
       return InitializePOMDPWorld(world_type, model, options);
   }
 
@@ -28,5 +29,6 @@ public:
 };
 
 int main(int argc, char* argv[]) {
+  
   return MyPlanner().RunEvaluation(argc, argv);
 }

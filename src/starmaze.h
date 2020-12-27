@@ -14,16 +14,7 @@ namespace despot {
 
 class SimpleState: public State {
 public:
-        int rat_position; // positions are numbered 0, 1, 2, 3, 4, 5, 6, 7 from center to topLeft2
-        int context; // 0
-        int time;
-
         SimpleState();
-        SimpleState(int _rat_position, int _context, int _time) :
-        rat_position(_rat_position),
-        context(_context),
-        time(_time) {
-        }
         SimpleState(int _state_id);
         ~SimpleState();
 
@@ -39,6 +30,27 @@ class StarMazeProblem : public DSPOMDP,
      public MDP,
      public StateIndexer,
      public StatePolicy  {
+     friend class SimpleState;
+     friend class OptimalStarMazePolicy;
+
+public:
+        enum ACTION{//action
+           A_CENTER = 0, A_CUE = 1, A_RIGHT = 2, A_LEFT = 3, A_TOPRIGHT1 = 4, A_TOPRIGHT2 = 5, A_TOPLEFT1 = 6, A_TOPLEFT2 = 7
+        };
+        enum OBSERVATION{ // observation
+           O_NONE=0, O_LEFT=1, O_TOPLEFT=2, O_RIGHT=3, O_TOPRIGHT = 4
+        };
+        enum CONTEXT{ // context
+           C_LEFT=0, C_TOPLEFT=1, C_RIGHT=2, C_TOPRIGHT = 3
+        };
+        enum RAT_POSITION{ // rat position
+           CENTER = 0, CUE = 1, RIGHT = 2, LEFT = 3, TOPRIGHT1 = 4, TOPRIGHT2 = 5, TOPLEFT1 = 6, TOPLEFT2 = 7
+        };
+        enum TIME_STEP{ // time
+           TIME_STEP_1=0, TIME_STEP_2=1, TIME_STEP_3=2, TIME_STEP_4 = 3
+        };
+        const int  CONTEXTTYPE = 4, MAZEPOSITIONS = 8, TOTALTIME = 4;
+
 protected:
         std::vector<std::vector<std::vector<State> > > transition_probabilities_; //state, action, [state, weight]
 
@@ -49,32 +61,28 @@ protected:
         mutable std::vector<ValuedAction> mdp_policy_;
         mutable std::vector<ACT_TYPE> default_action_;
         std::vector<int> pos_; // pos_[s]: position of rat for state s
-	std::vector<int> cont_; // cont_[s]: context of maze
-        std::vector<int> tim_;
+	     
+        std::vector<int> cont_; // cont_[s]: context of maze
+        std::vector<int> tim_; //tim_[s]: time 
 
-public:
-        enum {//action
-           A_CENTER = 0, A_CUE = 1, A_RIGHT = 2, A_LEFT = 3, A_TOPRIGHT1 = 4, A_TOPRIGHT2 = 5, A_TOPLEFT1 = 6, A_TOPLEFT2 = 7
-        };
-        enum { // observation
-           O_NONE=0, O_LEFT=1, O_TOPLEFT=2, O_RIGHT=3, O_TOPRIGHT = 4
-        };
-        enum { // context
-           C_LEFT=0, C_TOPLEFT=1, C_RIGHT=2, C_TOPRIGHT = 3
-        };
-        enum { // rat position
-           CENTER = 0, CUE = 1, RIGHT = 2, LEFT = 3, TOPRIGHT1 = 4, TOPRIGHT2 = 5, TOPLEFT1 = 6, TOPLEFT2 = 7
-        };
-        enum { // time
-           TIME_STEP_1=0, TIME_STEP_2=1, TIME_STEP_3=2, TIME_STEP_4 = 3
-        };
-        enum{
-          CONTEXTTYPE = 4, MAZEPOSITIONS = 8, TOTALTIME = 4
-        };
 public:
       StarMazeProblem();
+      static StarMazeProblem* current_;
 
-
+      inline int PosConTimIndicesToStateIndex(int CONTEXT, int RAT_POSITION, int TIME_STEP){                                                                                                                                                                                                                                                   IndicesToStateIndex(int CONTEXT, int RAT_POSITION, int TIME_STEP){
+         return CONTEXT*TOTALTIME*MAZEPOSITIONS
+                +RAT_POSITION*TOTALTIME
+                +TIME_STEP;
+      }
+      inline int StateIndexToContIndex(int index) const {
+		   return index / (TOTALTIME*MAZEPOSITIONS);
+	   }
+	   inline int StateIndexToPosIndex(int index) const {
+		   return index % (TOTALTIME*MAZEPOSITIONS)/TOTALTIME;
+	   }
+      inline int StateIndexToTimIndex(int index) const {
+		   return index % TOTALTIME;
+	   }
 
       /* Deterministic simulative model.*/
       //simulative model
@@ -83,7 +91,9 @@ public:
 
       int NumStates() const;
       /* Returns total number of actions.*/
-      int NumActions() const;
+      inline int NumActions() const{
+         return 8;
+      }
       /* Functions related to beliefs and starting states.*/
       
       virtual double ObsProb(OBS_TYPE obs, const State& state, ACT_TYPE action) const;
@@ -126,7 +136,7 @@ public:
       inline const State* GetState(int index) const {
 		return states_[index];
       }
-      int GetAction(const State& navistate) const;
+      int GetAction(const State& state) const;
       
 
 };

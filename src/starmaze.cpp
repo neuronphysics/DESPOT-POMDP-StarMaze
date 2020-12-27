@@ -12,27 +12,132 @@ namespace despot {
 /* =============================================================================
 * SimpleState class
 * =============================================================================*/
-
+StarMazeProblem* StarMazeProblem::current_ = NULL;
 SimpleState::SimpleState() {
 }
 
-/*
-SimpleState::SimpleState(vector<int> _state_id) {
+
+SimpleState::SimpleState(int _state_id) {
 	state_id = _state_id;
 }
-*/
+
 SimpleState::~SimpleState() {
 }
 
 string SimpleState::text() const {
-          return "rat position in the maze = " + to_string(rat_position) + " with context = " +
-                  to_string(context) + " and time step = " + to_string(time);
+          return "id=" + to_string(state_id);
+}
+
+/* =============================================================================
+* StarMaze class
+* =============================================================================*/
+
+
+StarMazeProblem::StarMazeProblem() {
+	current_ = this;
+	Init();
+}
+void StarMazeProblem::Init() {
+
+
+	SimpleState* state;
+	states_.resize(NumStates());
+	pos_.resize(NumStates());
+	cont_.resize(NumStates());
+    tim_.resize(NumStates());
+	for (int position = 0; position < MAZEPOSITIONS; position++) {
+		for (int context = 0; context < CONTEXTTYPE; context++) {
+            for (int time=0, time<TOTALTIME; time++){
+			    int s = PosConTimIndicesToStateIndex(context, position, time);
+			    state      = new SimpleState(s);
+			    states_[s] = state;
+	            pos_[s]    = position;
+			    cont_[s]   = context;
+                tim_[s]    = time;
+            }
+		}
+	}
+
+	// Build transition matrix
+	transition_probabilities_.resize(NumStates());
+	for (int s = 0; s < NumStates(); s++) {
+		transition_probabilities_[s].resize(NumActions());
+
+		for (int a = 0; a < NumActions(); a++) {
+            State next;
+            next.state_id = PosConTimIndicesToStateIndex(cont_[s], a, StateIndexToTimIndex(s) + 1);
+            if (pos_[s]==CENTER ){
+                if (a!=A_TOPLEFT2 || a!=A_TOPRIGHT2){
+                    next.weight =0.86;
+                    //if the rat is at the center and if she doesn't take topleft2 or topright2 actions then the probability of transition is 0.86   
+                }else {
+                    next.weight =0.02;
+                }
+            }else if ( pos_[s]==CUE){
+                if (a!=A_TOPLEFT2 || a!=A_TOPRIGHT2 || a!=A_CENTER){
+                    //if the rat is at the center and if she doesn't take walk back to the centter or topleft2 or topright2 actions then the probability of transition is 0.86   
+                    next.weight =0.86;
+                }else {
+                    next.weight =0.02;
+                }
+            }else if(pos_[s]==RIGHT){
+                if (a=A_RIGHT){
+                    //if the rat is at the right, the only likely transition is to stay  
+                    next.weight =0.86;
+                }else {
+                    next.weight =0.02;
+                }   
+            }else if(pos_[s]==LEFT){
+                if (a=A_LEFT){
+                    //if the rat is at the left arm then the most likely transition will be to stay
+                    next.weight =0.86;
+                }else {
+                    next.weight =0.02;
+                }   
+            }else if(pos_[s]==TOPRIGHT1){
+                if (a=A_TOPRIGHT2){
+                    //if the rat is at the topright1, the only likely transition is to go to the topright2  
+                    next.weight =0.86;
+                }else {
+                    next.weight =0.02;
+                }   
+            }else if(pos_[s]==TOPRIGHT2){
+                if (a=A_TOPRIGHT2){
+                    //if the rat is at the topright2, the only likely transition is to stay  
+                    next.weight =0.86;
+                }else {
+                    next.weight =0.02;
+                }   
+            }else if(pos_[s]==TOPLEFT1){
+                if (a=A_TOPLEFT2){
+                    //if the rat is at the topleft1 arm then the most likely to go to topleft2
+                    next.weight =0.86;
+                }else {
+                    next.weight =0.02;
+                }   
+            }else if(pos_[s]==TOPLEFT2){
+                if (a=A_TOPLEFT2){
+                    //if the rat is at the toplef2t arm then the most likely transition will be to stay
+                    next.weight =0.86;
+                }else {
+                    next.weight =0.02;
+                }   
+            }
+            transition_probabilities_[s][a].push_back(next);
+			
+		}
+	}
+}
+StarMazeProblem::~StarMazeProblem() {
+
 }
 /* =============================================================================
 * OptimalStarMazePolicy class
 * =============================================================================*/
-//StarMazeProblem* StarMazeProblem::current_ = NULL;
+
 class OptimalStarMazePolicy: public DefaultPolicy {
+private:
+        const StarMazeProblem* Starmaze_;
 public:
         
         OptimalStarMazePolicy(const DSPOMDP* model,
@@ -47,13 +152,6 @@ public:
             return StarMazeProblem::A_CUE;
         }
 };
-/* =============================================================================
-* StarMaze class
-* =============================================================================*/
-
-StarMazeProblem::StarMazeProblem() {
-    
-}
 
 
 /* ==============================
@@ -63,137 +161,46 @@ StarMazeProblem::StarMazeProblem() {
 bool StarMazeProblem::Step(State& state, double rand_num, ACT_TYPE action,
         double& reward, OBS_TYPE& obs) const {
     SimpleState& simple_state = static_cast < SimpleState& >(state);
-    int& rat_position = simple_state.rat_position;
-    int& context = simple_state.context;
-    int& time = simple_state.time;
-    cout<< "Hey you! I am in step functtion ..."<<endl;
-    if (time < 4){
-       if ( rat_position == CENTER) {
-          time    = time + 1;
-          context = context;
-          if (action == A_CENTER) {
-               obs     = O_NONE;
-               reward  = (time==TIME_STEP_4 && (context== C_TOPRIGHT||context== C_RIGHT)) ? -20 : 0;
-          } else if (action == A_CUE) {
-               rat_position = CUE;
-               if (context == C_LEFT){
-                  //with the probabiliy of 95%  rat will figure out the context of trial
-                  obs =  (rand_num > 0.02) ? O_LEFT : O_NONE;
-                  //obs    = O_LEFT;
-               } else if (context== C_TOPLEFT){
-                  obs =  (rand_num > 0.02) ? O_TOPLEFT : O_NONE;
-                  //obs    = O_TOPLEFT;
-               } else if (context== C_RIGHT){
-                  obs =  (rand_num > 0.02) ? O_RIGHT : O_NONE;
-                  //obs   = O_RIGHT;
-               } else {
-                  obs =  (rand_num > 0.02) ? O_TOPRIGHT : O_NONE;
-                  //obs = O_TOPRIGHT;
-               }
-               reward = (time==TIME_STEP_4 && (context== C_TOPRIGHT||context== C_RIGHT)) ? -20 : 0;
-          } else if (action == A_RIGHT) {
-               obs     = O_NONE;
-               rat_position = RIGHT;
-               if (context== C_RIGHT){
-                  obs = O_RIGHT;
-               }
-               reward = (time==TIME_STEP_4 && context== C_TOPRIGHT) ? -20 : 0;
-          } else if (action == A_LEFT){
-               obs     = O_NONE;
-               rat_position = LEFT;
-               if (context== C_LEFT){
-                  obs    = O_LEFT;
-                  reward = 10;
-               }else{
-                  reward = (time==TIME_STEP_4 && (context== C_TOPRIGHT||context== C_RIGHT)) ? -20 : 0;
-               }
-          } else if (action==A_TOPRIGHT1 || action==A_TOPLEFT1){
-              if (action==A_TOPLEFT1){
-                 rat_position = TOPLEFT1;
-              }else{
-                 rat_position = TOPRIGHT1;
-              }
-              time    = time + 1;
-              context = context; //context stays the same through each trial
-              obs     = O_NONE;
-              reward = (time==TIME_STEP_4 && (context== C_TOPRIGHT||context== C_RIGHT)) ? -20 : 0;
-          }
-      } else if (rat_position == CUE) {
-          time    = time + 1;
-          context = context; //context stays the same through each trial
-          if (action == A_CUE) {
-             reward  = (time==TIME_STEP_4 && (context== C_TOPRIGHT||context== C_RIGHT)) ? -20 : 0;
-          } else if (action == A_RIGHT) {
-              rat_position = RIGHT;
-              reward = (time==TIME_STEP_4 && context== C_TOPRIGHT) ? -20 : 0;
-          } else if (action==A_LEFT){
-              rat_position = LEFT;
-              if (context== C_LEFT){
-                 reward =10;
-              }else {
-                 reward = (time==TIME_STEP_4 && (context== C_TOPRIGHT||context== C_RIGHT)) ? -20 : 0;
-              }
-          } else if (action==A_TOPRIGHT1 || action==A_TOPLEFT1){
-              time    = time + 1;
-              context = context; //context stays the same through each trial
-              if (action==A_TOPLEFT1){
-                 rat_position = TOPLEFT1;
-              }else{
-                 rat_position = TOPRIGHT1;
-              }
-              reward = (time==TIME_STEP_4 && (context== C_TOPRIGHT||context== C_RIGHT)) ? -20 : 0;
-          }
-      } else if (rat_position == RIGHT) {
-          if (action == A_RIGHT) {
-              time    = time + 1;
-              context = context; //context stays the same through each trial
-              reward  = (time==TIME_STEP_4 && context== C_TOPRIGHT) ? -20 : 0;
-          }
-      } else if (rat_position == LEFT){
-          if (action == A_LEFT) {
-             time    = time + 1;
-             context = context; //context stays the same through each trial
-             reward  = (time==TIME_STEP_4 && (context== C_TOPRIGHT||context== C_RIGHT)) ? -20 : 0;
-          }
-      } else if (rat_position==TOPRIGHT1){
-          if (action == A_TOPRIGHT2) {
-             time    = time + 1;
-             context = context; //context stays the same through each trial
-             rat_position = TOPRIGHT2;
-             if (context== C_TOPRIGHT){
-                obs = O_TOPRIGHT;
-             }
-             reward = (time==TIME_STEP_4 && context== C_RIGHT) ? -20 : 0;
-          }
-      } else if (rat_position==TOPRIGHT2){
-         if (action == A_TOPRIGHT2) {
-            time    = time + 1;
-            context = context; //context stays the same through each trial
-            reward  = (time==TIME_STEP_4 && context== C_RIGHT) ? -20 : 0;
-         }
-      } else if (rat_position==TOPLEFT1){
-         if (action == A_TOPLEFT2){
-            time    = time + 1;
-            context = context; //context stays the same through each trial
-            rat_position=TOPLEFT2;
-            if (context== C_TOPLEFT){
-               obs    = O_TOPLEFT;
-               reward = 20;
+    reward = 0.0;
+    obs    = O_NONE;
+    bool terminal = false;
+    if (tim_[simple_state.state_id]==TIME_STEP_3){
+        if ( cont_[simple_state.state_id]==C_RIGHT){
+            if (action!=A_RIGHT){
+               reward = -20;
             }else {
-               reward = (time==TIME_STEP_4 && (context== C_TOPRIGHT||context== C_RIGHT)) ? -20 : 0;
+               obs    = O_RIGHT;
+            }  
+        }else if(action==A_LEFT && cont_[simple_state.state_id]==C_LEFT){
+            reward = 10;
+            obs    = O_LEFT;
+        }else if ( cont_[simple_state.state_id]==C_TOPRIGHT){
+            if (action!=A_TOPRIGHT2){
+               reward = -20;
+            }else {
+               obs    = O_TOPRIGHT;
             }
-         }
-      } else if (rat_position==TOPLEFT2){
-        if (action==A_TOPLEFT2){
-           time    = time + 1;
-           context = context; //context stays the same through each trial
-           reward  = (time==TIME_STEP_4 && (context== C_TOPRIGHT||context== C_RIGHT)) ? -20 : 0;
+        }else if(action==A_TOPLEFT2 && cont_[simple_state.state_id]==C_TOPLEFT){
+            reward = 20;
+            obs    = O_TOPLEFT;
         }
-      }
-      return false;
+        terminal = true;
+        return terminal;
     }else{
-       // The trial finishes at time step greater than 4
-       return true;
+    
+      const vector<State>& distribution =
+		transition_probabilities_[state.state_id][action];
+	double sum = 0;
+	for (int i = 0; i < distribution.size(); i++) {
+		const State& next = distribution[i];
+		sum += next.weight;
+		if (sum >= random_num) {
+			state.state_id = next.state_id;
+			break;
+		}
+	}
+
+      return terminal;
     }
 }
 
@@ -203,31 +210,28 @@ bool StarMazeProblem::Step(State& state, double rand_num, ACT_TYPE action,
 int StarMazeProblem::NumStates() const {
 	 return CONTEXTTYPE * MAZEPOSITIONS * TOTALTIME;
 }
-int StarMazeProblem::NumActions() const {
-    return 8;
-}
 
 
 double StarMazeProblem::ObsProb(OBS_TYPE obs, const State& state,
     ACT_TYPE action) const {
       const SimpleState& simple_state = static_cast < const SimpleState& >(state);
-      int rat_position = simple_state.rat_position;
-      int context = simple_state.context;
       
       if (action == A_CUE) {
           // when the rat at CUE, its observation is correct with probability 0.98
-          return (obs == context-1) ? 0.98 : 0.02;
+          return (obs == cont_[simple_state.state_id]+1) ? 0.96 : 0.04;
           //because he first observation is none and the rest is similar to the context
-      }else if (action == A_LEFT && context== C_LEFT){      
-            return (obs==O_LEFT);
-      }else if (action == A_TOPLEFT2 && context== C_TOPLEFT){
-            return (obs==O_TOPLEFT);
-       }else if (action == A_RIGHT && context== C_RIGHT){
-             return (obs==O_RIGHT);
-      }else if (action == A_TOPRIGHT2 && context== C_TOPRIGHT){
-             return (obs==O_TOPRIGHT);//return 1 if correct and 0 otherwise
+      }else if (action == A_LEFT && cont_[simple_state.state_id] == C_LEFT){      
+          return (obs==O_LEFT);
+      }else if (action == A_TOPLEFT2 && cont_[simple_state.state_id] == C_TOPLEFT){
+          return (obs==O_TOPLEFT);
+       }else if (action == A_RIGHT && cont_[simple_state.state_id] == C_RIGHT){
+          return (obs==O_RIGHT);
+      }else if (action == A_TOPRIGHT2 && cont_[simple_state.state_id] == C_TOPRIGHT){
+          return (obs==O_TOPRIGHT);//return 1 if correct and 0 otherwise
       }else{
-      return obs == O_NONE;
+          // when the actions are not A_CUE, the rat does not receive any observations unless rat moves to the arm with the same context then he receives the correct observation.
+          // assume it receives a default observation with probability 1 which is none.
+          return obs == O_NONE;
       }
 }
 /* ================================================
@@ -244,27 +248,27 @@ Belief* StarMazeProblem::InitialBelief(const State* start, string type) const {
         
         if (type == "DEFAULT" || type == "PARTICLE") {
             vector<State*> particles;
-            
+            int s = PosConTimIndicesToStateIndex(CENTER, C_LEFT, TIME_STEP_1);
             //Allocate() function allocates some space for creating new state;
-            SimpleState* left_context = static_cast<SimpleState*>(Allocate(1, 0.5));
+            SimpleState* left_context = static_cast<SimpleState*>(Allocate(1, 0.25));
             left_context->rat_position = CENTER;
             left_context->context      = O_LEFT;//why is it observation not state???
             left_context->time         = TIME_STEP_1;
             particles.push_back(left_context);
 
-            SimpleState* topLeft_context = static_cast<SimpleState*>(Allocate(1, 0.5));
+            SimpleState* topLeft_context = static_cast<SimpleState*>(Allocate(2, 0.25));
             topLeft_context->rat_position = CENTER;
             topLeft_context->context      = O_TOPLEFT;//why is it observation not state???
             topLeft_context->time         = TIME_STEP_1;
             particles.push_back(topLeft_context);
 
-            SimpleState* right_context = static_cast<SimpleState*>(Allocate(1, 0.5));//first component is state_id, the second one is weight
+            SimpleState* right_context = static_cast<SimpleState*>(Allocate(3, 0.25));//first component is state_id, the second one is weight
             right_context->rat_position = CENTER;
             right_context->context      = O_RIGHT;//why is it observation not state???
             right_context->time         = TIME_STEP_1;
             particles.push_back(right_context);
 
-            SimpleState* topRight_context = static_cast<SimpleState*>(Allocate(1, 0.5));
+            SimpleState* topRight_context = static_cast<SimpleState*>(Allocate(4, 0.25));
             topRight_context->rat_position = CENTER;
             topRight_context->context      = O_TOPRIGHT;//why is it matched wih observation not state???
             topRight_context->time         = TIME_STEP_1;
@@ -284,11 +288,11 @@ double StarMazeProblem::Reward(int s, ACT_TYPE action) const {
 	double reward = 0;
     
 	if (action == A_LEFT)  {
-        if ( cont_[simple_state->state_id] ==C_LEFT){
+        if ( cont_[simple_state->state_id] ==C_LEFT && (pos_[simple_state->state_id]==CENTER || pos_[simple_state->state_id]==CUE)){
 		   reward = 10;
         }
 	} else if  (action == A_TOPLEFT2 ){
-        if (cont_[simple_state->state_id]==C_TOPLEFT){
+        if (cont_[simple_state->state_id]==C_TOPLEFT&& pos_[simple_state->state_id]==TOPLEFT1){
 		   reward = 20;
         }
 	} else if  (action != A_TOPRIGHT2){
@@ -319,7 +323,7 @@ void StarMazeProblem::ComputeDefaultActions(string type) const {
 		int num_states = NumStates();
 		default_action_.resize(num_states);
 
-		double value = 0;
+		double value = 0;//it seems this variable is redundant 
 		for (int s = 0; s < num_states; s++) {
 			default_action_[s] = policy_[s].action;
 			value += policy_[s].value;
@@ -380,28 +384,6 @@ Belief* StarMazeProblem::Tau(const Belief* belief, ACT_TYPE action,
 }
 
 
-/* ==================================================
- * StarMazeBelief class
- * ==================================================*/
-StarMazeBelief::StarMazeBelief(vector<State*> particles, const DSPOMDP* model, Belief* prior ):
-		            ParticleBelief(particles, model, prior),
-		            Starmaze_(static_cast<const StarMazeProblem*>(model)) {
-}
-
-void StarMazeBelief::Update(ACT_TYPE action, OBS_TYPE obs){ // TODO: Not complete yet
-		          Belief* updated = Starmaze_->Tau(this, action, obs);
-
-		          for (int i = 0; i < particles_.size(); i++)
-			          Starmaze_->Free(particles_[i]);
-		          particles_.clear();
-
-		          const vector<State*>& new_particles =
-		          	    static_cast<ParticleBelief*>(updated)->particles();
-		          for (int i = 0; i < new_particles.size(); i++)
-			              particles_.push_back(Starmaze_->Copy(new_particles[i]));
-
-		          delete updated;
-}
 /*=====================================*
  *     Bound
  *=====================================*/
@@ -424,16 +406,16 @@ ScenarioUpperBound* StarMazeProblem::CreateScenarioUpperBound(string name,
         if (name == "TRIVIAL" || name == "DEFAULT") {
             return new TrivialParticleUpperBound(this);
         } else if (name == "LOOKAHEAD") {
-            return new LookaheadUpperBound(this, *indexer,
+            return new LookaheadUpperBound(this, *this,
                  CreateParticleUpperBound(particle_bound_name));
 
         } else if (name == "MDP") {
-            return new MDPUpperBound(this, *this);
+            return new MDPUpperBound(this, *indexer);
         } else {
             cerr << "Unsupported base upper bound: " << name << endl;
             exit(0);
-            return NULL;
         }
+        
 }
 ScenarioLowerBound* StarMazeProblem::CreateScenarioLowerBound(string name,
                                      string particle_bound_name="DEFAULT") const {
