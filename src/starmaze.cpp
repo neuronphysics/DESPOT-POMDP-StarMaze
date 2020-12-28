@@ -235,45 +235,55 @@ double StarMazeProblem::ObsProb(OBS_TYPE obs, const State& state,
       }
 }
 /* ================================================
+*      Randomly choosing k number from 0 to N
+*  ===============================================*/
+std::vector<int> pick(int N, int k) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    std::unordered_set<int> elems = pickSet(N, k, gen);
+
+    // ok, now we have a set of k elements. but now
+    // it's in a [unknown] deterministic order.
+    // so we have to shuffle it:
+
+    std::vector<int> result(elems.begin(), elems.end());
+    std::shuffle(result.begin(), result.end(), gen);
+    return result;
+}
+std::unordered_set<int> pickSet(int N, int k, std::mt19937& gen)
+{
+    std::uniform_int_distribution<> dis(1, N);
+    std::unordered_set<int> elems;
+
+    while (elems.size() < k) {
+        elems.insert(dis(gen));
+    }
+
+    return elems;
+}
+/* ================================================
 * Functions related to beliefs and starting states
 * ================================================*/
 
 State* StarMazeProblem::CreateStartState(string type) const {
-  // Always start at the center and time 0 with random belief about the context
-   
-   return new SimpleState(0, Random::RANDOM.NextInt(4),0);//????
+  // Always rat starts at the center at time 0 with uniform belief about the context
+   std::vector<int> context = pick(CONTEXTTYPE, 1);
+   int s = PosConTimIndicesToStateIndex(context.front(),RAT_POSITION::CENTER,TIME_STEP::TIME_STEP_1);
+   return new SimpleState(s);//????
 }
 
 Belief* StarMazeProblem::InitialBelief(const State* start, string type) const {
         
         if (type == "DEFAULT" || type == "PARTICLE") {
             vector<State*> particles;
-            int s = PosConTimIndicesToStateIndex(CENTER, C_LEFT, TIME_STEP_1);
-            //Allocate() function allocates some space for creating new state;
-            SimpleState* left_context = static_cast<SimpleState*>(Allocate(1, 0.25));
-            left_context->rat_position = CENTER;
-            left_context->context      = O_LEFT;//why is it observation not state???
-            left_context->time         = TIME_STEP_1;
-            particles.push_back(left_context);
-
-            SimpleState* topLeft_context = static_cast<SimpleState*>(Allocate(2, 0.25));
-            topLeft_context->rat_position = CENTER;
-            topLeft_context->context      = O_TOPLEFT;//why is it observation not state???
-            topLeft_context->time         = TIME_STEP_1;
-            particles.push_back(topLeft_context);
-
-            SimpleState* right_context = static_cast<SimpleState*>(Allocate(3, 0.25));//first component is state_id, the second one is weight
-            right_context->rat_position = CENTER;
-            right_context->context      = O_RIGHT;//why is it observation not state???
-            right_context->time         = TIME_STEP_1;
-            particles.push_back(right_context);
-
-            SimpleState* topRight_context = static_cast<SimpleState*>(Allocate(4, 0.25));
-            topRight_context->rat_position = CENTER;
-            topRight_context->context      = O_TOPRIGHT;//why is it matched wih observation not state???
-            topRight_context->time         = TIME_STEP_1;
-            particles.push_back(topRight_context);
-
+            for (int cont = 0; cont!=CONTEXTTYPE; ++cont) {
+                CONTEXT eCurrent = (CONTEXT)cont;
+                int s = PosConTimIndicesToStateIndex(CENTER, cont, TIME_STEP_1);
+                //Allocate() function allocates some space for creating new state;
+                SimpleState* InitialState = static_cast<SimpleState*>(Allocate(states_[s], 0.25));
+                particles.push_back(InitialState);
+            }
             return new ParticleBelief(particles, this);
         } else {
             cerr << "Unsupported belief type: " << type << endl;

@@ -98,6 +98,9 @@ public:
       
       virtual double ObsProb(OBS_TYPE obs, const State& state, ACT_TYPE action) const;
 
+      std::vector<int> pick(int N, int k) const;
+      std::unordered_set<int> pickSet(int N, int k, std::mt19937& gen) const;
+
       State* CreateStartState(std::string type = "DEFAULT") const;
       Belief* InitialBelief(const State* start, std::string type = "DEFAULT") const;
       double Reward(int s, ACT_TYPE a) const;
