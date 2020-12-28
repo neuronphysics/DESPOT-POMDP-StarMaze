@@ -47,7 +47,7 @@ void StarMazeProblem::Init() {
     tim_.resize(NumStates());
 	for (int position = 0; position < MAZEPOSITIONS; position++) {
 		for (int context = 0; context < CONTEXTTYPE; context++) {
-            for (int time=0, time<TOTALTIME; time++){
+            for (int time=0; time<TOTALTIME; time++){
 			    int s = PosConTimIndicesToStateIndex(context, position, time);
 			    state      = new SimpleState(s);
 			    states_[s] = state;
@@ -81,42 +81,42 @@ void StarMazeProblem::Init() {
                     next.weight =0.02;
                 }
             }else if(pos_[s]==RIGHT){
-                if (a=A_RIGHT){
+                if (a==A_RIGHT){
                     //if the rat is at the right, the only likely transition is to stay  
                     next.weight =0.86;
                 }else {
                     next.weight =0.02;
                 }   
             }else if(pos_[s]==LEFT){
-                if (a=A_LEFT){
+                if (a==A_LEFT){
                     //if the rat is at the left arm then the most likely transition will be to stay
                     next.weight =0.86;
                 }else {
                     next.weight =0.02;
                 }   
             }else if(pos_[s]==TOPRIGHT1){
-                if (a=A_TOPRIGHT2){
+                if (a==A_TOPRIGHT2){
                     //if the rat is at the topright1, the only likely transition is to go to the topright2  
                     next.weight =0.86;
                 }else {
                     next.weight =0.02;
                 }   
             }else if(pos_[s]==TOPRIGHT2){
-                if (a=A_TOPRIGHT2){
+                if (a==A_TOPRIGHT2){
                     //if the rat is at the topright2, the only likely transition is to stay  
                     next.weight =0.86;
                 }else {
                     next.weight =0.02;
                 }   
             }else if(pos_[s]==TOPLEFT1){
-                if (a=A_TOPLEFT2){
+                if (a==A_TOPLEFT2){
                     //if the rat is at the topleft1 arm then the most likely to go to topleft2
                     next.weight =0.86;
                 }else {
                     next.weight =0.02;
                 }   
             }else if(pos_[s]==TOPLEFT2){
-                if (a=A_TOPLEFT2){
+                if (a==A_TOPLEFT2){
                     //if the rat is at the toplef2t arm then the most likely transition will be to stay
                     next.weight =0.86;
                 }else {
@@ -128,6 +128,7 @@ void StarMazeProblem::Init() {
 		}
 	}
 }
+
 StarMazeProblem::~StarMazeProblem() {
 
 }
@@ -164,7 +165,7 @@ bool StarMazeProblem::Step(State& state, double rand_num, ACT_TYPE action,
     reward = 0.0;
     obs    = O_NONE;
     bool terminal = false;
-    if (tim_[simple_state.state_id]==TIME_STEP_3){
+    if (tim_[simple_state.state_id]==TIME_STEP_4){
         if ( cont_[simple_state.state_id]==C_RIGHT){
             if (action!=A_RIGHT){
                reward = -20;
@@ -194,13 +195,17 @@ bool StarMazeProblem::Step(State& state, double rand_num, ACT_TYPE action,
 	for (int i = 0; i < distribution.size(); i++) {
 		const State& next = distribution[i];
 		sum += next.weight;
-		if (sum >= random_num) {
+		if (sum >= rand_num) {
 			state.state_id = next.state_id;
-			break;
+			return terminal;
 		}
 	}
-
-      return terminal;
+    int T= tim_[state.state_id]+1;
+    int C= cont_[state.state_id];
+    int P= pos_[state.state_id];
+    int s =PosConTimIndicesToStateIndex(C, P, T);
+    state.state_id =s;
+    return terminal;
     }
 }
 
@@ -237,6 +242,7 @@ double StarMazeProblem::ObsProb(OBS_TYPE obs, const State& state,
 /* ================================================
 *      Randomly choosing k number from 0 to N
 *  ===============================================*/
+/*
 std::vector<int> pick(int N, int k) {
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -262,14 +268,17 @@ std::unordered_set<int> pickSet(int N, int k, std::mt19937& gen)
 
     return elems;
 }
+*/
+
 /* ================================================
 * Functions related to beliefs and starting states
 * ================================================*/
 
 State* StarMazeProblem::CreateStartState(string type) const {
   // Always rat starts at the center at time 0 with uniform belief about the context
-   std::vector<int> context = pick(CONTEXTTYPE, 1);
-   int s = PosConTimIndicesToStateIndex(context.front(),RAT_POSITION::CENTER,TIME_STEP::TIME_STEP_1);
+   //std::vector<int> context = pick(CONTEXTTYPE, 1);
+   int context= rand()%CONTEXTTYPE;
+   int s = PosConTimIndicesToStateIndex(context,CENTER,TIME_STEP_1);
    return new SimpleState(s);//????
 }
 
@@ -278,10 +287,10 @@ Belief* StarMazeProblem::InitialBelief(const State* start, string type) const {
         if (type == "DEFAULT" || type == "PARTICLE") {
             vector<State*> particles;
             for (int cont = 0; cont!=CONTEXTTYPE; ++cont) {
-                CONTEXT eCurrent = (CONTEXT)cont;
+                
                 int s = PosConTimIndicesToStateIndex(CENTER, cont, TIME_STEP_1);
                 //Allocate() function allocates some space for creating new state;
-                SimpleState* InitialState = static_cast<SimpleState*>(Allocate(states_[s], 0.25));
+                SimpleState* InitialState = static_cast<SimpleState*>(Allocate(s, 0.25));
                 particles.push_back(InitialState);
             }
             return new ParticleBelief(particles, this);
@@ -482,37 +491,13 @@ ScenarioLowerBound* StarMazeProblem::CreateScenarioLowerBound(string name,
  * ============================================*/
 void StarMazeProblem::PrintState(const State& state, ostream& out) const {
         const SimpleState& simple_state = static_cast<const SimpleState&>(state);
+        int s= simple_state.state_id;
 
-        out << "Rat = " << simple_state.rat_position << "; Context = "
-        << simple_state.context << "; time = " << simple_state.time << endl;
+        out << "Rat = " << pos_[s] << "; Context = "
+        << cont_[s] << "; time = " << tim_[s] << endl;
 }
 
 void StarMazeProblem::PrintBelief(const Belief& belief, ostream& out) const {
-     const vector<State*>& particles =
-     static_cast<const ParticleBelief&>(belief).particles();
-     vector<double> pos_probs(8);
-     vector<double> context_probs(4);
-     vector<double> time_probs(4);
-     for (int i = 0; i < particles.size(); i++) {
-            State* particle = particles[i];
-            const SimpleState* state = static_cast<const SimpleState*>(particle);
-            context_probs[state->context] += particle->weight;
-            pos_probs[state->rat_position] += particle->weight;
-            time_probs[state->time] += particle->weight;
-     }
-
-     out << "Rat belief about the context: " << " LEFT" << ":" << context_probs[0]<<
-        " TOPLEFT" << ":" << context_probs[1] << " RIGHT" << ":" << context_probs[2]<<
-        " TOPRIGHT" << ":" << context_probs[3] << endl;
-
-     out << "Position belief:" << " CENTER" << ":" << pos_probs[0] << " CUE" << ":" <<
-        pos_probs[1] << " RIGHT" << ":" << pos_probs[2] << " LEFT" << ":" << pos_probs[3]
-        <<" TOPRIGHT1 " << ":" << pos_probs[4]<< " TOPRIGHT2"<< ":" << pos_probs[5] <<
-        " TOPLEFT1" << ":" << pos_probs[6] << " TOPLEFT2" << ":" << pos_probs[7]<< endl;
-
-     out<< "Time step belief: "<< "TIME_STEP_1" <<":"<< time_probs[0] << "TIME_STEP_2"
-        <<":"<< time_probs[1] << "TIME_STEP_3" <<":"<< time_probs[2] <<"TIME_STEP_4" << ":"
-        <<time_probs[3]<<endl;
 }
 
 void StarMazeProblem::PrintObs(const State& state, OBS_TYPE obs, ostream& out) const {

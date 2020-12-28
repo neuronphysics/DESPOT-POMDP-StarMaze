@@ -6,6 +6,7 @@
 #include <despot/core/particle_belief.h>
 #include <despot/interface/pomdp.h>
 #include <despot/core/mdp.h>
+using namespace std;
 namespace despot {
 
 /* =============================================================================
@@ -34,19 +35,19 @@ class StarMazeProblem : public DSPOMDP,
      friend class OptimalStarMazePolicy;
 
 public:
-        enum ACTION{//action
+        enum {//action
            A_CENTER = 0, A_CUE = 1, A_RIGHT = 2, A_LEFT = 3, A_TOPRIGHT1 = 4, A_TOPRIGHT2 = 5, A_TOPLEFT1 = 6, A_TOPLEFT2 = 7
         };
-        enum OBSERVATION{ // observation
+        enum { // observation
            O_NONE=0, O_LEFT=1, O_TOPLEFT=2, O_RIGHT=3, O_TOPRIGHT = 4
         };
-        enum CONTEXT{ // context
+        enum { // context
            C_LEFT=0, C_TOPLEFT=1, C_RIGHT=2, C_TOPRIGHT = 3
         };
-        enum RAT_POSITION{ // rat position
+        enum { // rat position
            CENTER = 0, CUE = 1, RIGHT = 2, LEFT = 3, TOPRIGHT1 = 4, TOPRIGHT2 = 5, TOPLEFT1 = 6, TOPLEFT2 = 7
         };
-        enum TIME_STEP{ // time
+        enum { // time
            TIME_STEP_1=0, TIME_STEP_2=1, TIME_STEP_3=2, TIME_STEP_4 = 3
         };
         const int  CONTEXTTYPE = 4, MAZEPOSITIONS = 8, TOTALTIME = 4;
@@ -60,19 +61,19 @@ protected:
 
         mutable std::vector<ValuedAction> mdp_policy_;
         mutable std::vector<ACT_TYPE> default_action_;
-        std::vector<int> pos_; // pos_[s]: position of rat for state s
-	     
+        std::vector<int> pos_; // pos_[s]: position of rat for state s	     
         std::vector<int> cont_; // cont_[s]: context of maze
         std::vector<int> tim_; //tim_[s]: time 
 
 public:
       StarMazeProblem();
       static StarMazeProblem* current_;
-
-      inline int PosConTimIndicesToStateIndex(int CONTEXT, int RAT_POSITION, int TIME_STEP){                                                                                                                                                                                                                                                   IndicesToStateIndex(int CONTEXT, int RAT_POSITION, int TIME_STEP){
-         return CONTEXT*TOTALTIME*MAZEPOSITIONS
-                +RAT_POSITION*TOTALTIME
-                +TIME_STEP;
+      void Init();
+      ~StarMazeProblem(); 
+      inline int PosConTimIndicesToStateIndex(int context, int rat_position, int time_step) const {                                                                                                                                                                                                                                                   
+         return context*TOTALTIME*MAZEPOSITIONS
+                +rat_position*TOTALTIME
+                +time_step;
       }
       inline int StateIndexToContIndex(int index) const {
 		   return index / (TOTALTIME*MAZEPOSITIONS);
@@ -96,10 +97,10 @@ public:
       }
       /* Functions related to beliefs and starting states.*/
       
-      virtual double ObsProb(OBS_TYPE obs, const State& state, ACT_TYPE action) const;
+      double ObsProb(OBS_TYPE obs, const State& state, ACT_TYPE action) const;
 
-      std::vector<int> pick(int N, int k) const;
-      std::unordered_set<int> pickSet(int N, int k, std::mt19937& gen) const;
+      //vector<int> pick(int N, int k) const;
+      //unordered_set<int> pickSet(int N, int k, std::mt19937& gen) const;
 
       State* CreateStartState(std::string type = "DEFAULT") const;
       Belief* InitialBelief(const State* start, std::string type = "DEFAULT") const;
@@ -147,7 +148,6 @@ public:
    StarMazeBelief Class
  * =========================================*/
 
-class StarMazeProblem;
 class StarMazeBelief: public ParticleBelief {
 private:
  	     const StarMazeProblem* Starmaze_;
@@ -157,5 +157,5 @@ public:
 };
 
 
-}  // namespace despot
+};  // namespace despot
 #endif
