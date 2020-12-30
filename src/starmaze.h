@@ -50,7 +50,8 @@ public:
         enum { // time
            TIME_STEP_1=0, TIME_STEP_2=1, TIME_STEP_3=2, TIME_STEP_4 = 3
         };
-        const int  CONTEXTTYPE = 4, MAZEPOSITIONS = 8, TOTALTIME = 4;
+        const int  CONTEXTTYPE = 4, MAZEPOSITIONS = 8, TOTALTIME = 4; 
+        const double NOISE=0.05;
 
 protected:
         std::vector<std::vector<std::vector<State> > > transition_probabilities_; //state, action, [state, weight]
@@ -99,9 +100,8 @@ public:
       
       double ObsProb(OBS_TYPE obs, const State& state, ACT_TYPE action) const;
 
-      //vector<int> pick(int N, int k) const;
-      //unordered_set<int> pickSet(int N, int k, std::mt19937& gen) const;
-
+      void PrintMDPPolicy() const; 
+      void PrintTransitions() const;
       State* CreateStartState(std::string type = "DEFAULT") const;
       Belief* InitialBelief(const State* start, std::string type = "DEFAULT") const;
       double Reward(int s, ACT_TYPE a) const;
