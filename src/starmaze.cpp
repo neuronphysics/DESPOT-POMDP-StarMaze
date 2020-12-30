@@ -65,15 +65,16 @@ void StarMazeProblem::Init() {
 		transition_probabilities_[s].resize(NumActions());
 
 		for (int a = 0; a < NumActions(); a++) {
+            transition_probabilities_[s][a].clear();
+            State next;
+            next.state_id = PosConTimIndicesToStateIndex(cont_[s], a, tim_[s] + 1);
             if (tim_[s]<=TIME_STEP_3){
-                transition_probabilities_[s][a].clear();
-                State next;
-                next.state_id = PosConTimIndicesToStateIndex(cont_[s], a, tim_[s] + 1);
+                
                 if (pos_[s]==CENTER ){
                    //if the rat is at the center and if she doesn't take topleft2 or topright2 actions then the probability of transition is 0.86   
                    switch (a) {
                         case A_CENTER: next.weight = 0.965;break;
-                        case A_CUE: next.weight = 0.965;break;   //execution starts at this case label
+                        case A_CUE: next.weight = 0.965;break;   
                         case A_RIGHT: next.weight = 0.965;break;
                         case A_LEFT: next.weight = 0.965;break;
                         case A_TOPRIGHT1: next.weight = 0.965;break;
@@ -84,7 +85,7 @@ void StarMazeProblem::Init() {
                 }else if ( pos_[s]==CUE){
                     switch (a) {
                         case A_CENTER: next.weight = 0.005;break;
-                        case A_CUE: next.weight = 0.965;break;   //execution starts at this case label
+                        case A_CUE: next.weight = 0.965;break;   
                         case A_RIGHT: next.weight = 0.965;break;
                         case A_LEFT: next.weight = 0.965;break;
                         case A_TOPRIGHT1: next.weight = 0.965;break;
@@ -95,7 +96,7 @@ void StarMazeProblem::Init() {
                 }else if(pos_[s]==RIGHT){
                     switch (a) {
                         case A_CENTER: next.weight = 0.01;break;
-                        case A_CUE: next.weight = 0.01;break;   //execution starts at this case label
+                        case A_CUE: next.weight = 0.01;break;   
                         case A_RIGHT: next.weight = 0.93;break;
                         case A_LEFT: next.weight = 0.01;break;
                         case A_TOPRIGHT1: next.weight = 0.01;break;
@@ -107,7 +108,7 @@ void StarMazeProblem::Init() {
                     //if the rat is at the left arm then the most likely transition will be to stay
                     switch (a) {
                         case A_CENTER: next.weight = 0.01;break;
-                        case A_CUE: next.weight = 0.01;break;   //execution starts at this case label
+                        case A_CUE: next.weight = 0.01;break;   
                         case A_RIGHT: next.weight = 0.01;break;
                         case A_LEFT: next.weight = 0.93;break;
                         case A_TOPRIGHT1: next.weight = 0.01;break;
@@ -119,7 +120,7 @@ void StarMazeProblem::Init() {
                     //if the rat is at the topright1, the only likely transition is to go to the topright2  
                     switch (a) {
                         case A_CENTER: next.weight = 0.005;break;
-                        case A_CUE: next.weight = 0.005;break;   //execution starts at this case label
+                        case A_CUE: next.weight = 0.005;break;   
                         case A_RIGHT: next.weight = 0.005;break;
                         case A_LEFT: next.weight = 0.005;break;
                         case A_TOPRIGHT1: next.weight = 0.005;break;
@@ -131,7 +132,7 @@ void StarMazeProblem::Init() {
                     //if the rat is at the topright2, the only likely transition is to stay put 
                     switch (a) {
                         case A_CENTER: next.weight = 0.005;break;
-                        case A_CUE: next.weight = 0.005;break;   //execution starts at this case label
+                        case A_CUE: next.weight = 0.005;break;  
                         case A_RIGHT: next.weight = 0.005;break;
                         case A_LEFT: next.weight = 0.005;break;
                         case A_TOPRIGHT1: next.weight = 0.005;break;
@@ -143,7 +144,7 @@ void StarMazeProblem::Init() {
                     //if the rat is at the topleft1 arm then the most likely to go to topleft2
                     switch (a) {
                         case A_CENTER: next.weight = 0.005;break;
-                        case A_CUE: next.weight = 0.005;break;   //execution starts at this case label
+                        case A_CUE: next.weight = 0.005;break;   
                         case A_RIGHT: next.weight = 0.005;break;
                         case A_LEFT: next.weight = 0.005;break;
                         case A_TOPRIGHT1: next.weight = 0.005;break;
@@ -155,7 +156,7 @@ void StarMazeProblem::Init() {
                     //if the rat is at the toplef2t arm then the most likely transition will be to stay
                     switch (a) {
                         case A_CENTER: next.weight = 0.005;break;
-                        case A_CUE: next.weight = 0.005;break;   //execution starts at this case label
+                        case A_CUE: next.weight = 0.005;break;   
                         case A_RIGHT: next.weight = 0.005;break;
                         case A_LEFT: next.weight = 0.005;break;
                         case A_TOPRIGHT1: next.weight = 0.005;break;
@@ -167,12 +168,14 @@ void StarMazeProblem::Init() {
                 transition_probabilities_[s][a].push_back(next);
             }else{
                 //transitions with zero probabilities
-                transition_probabilities_[s][a].clear();
-                State next;
-                next.state_id = PosConTimIndicesToStateIndex(cont_[s], a, tim_[s] + 1);
+                int total = TOTALTIME*MAZEPOSITIONS ;
+                if (next.state_id%total==0){
+                    next.state_id -= total;
+                }
+                
                 switch (a) {
                     case A_CENTER: next.weight = 0.0;break;
-                    case A_CUE: next.weight = 0.0;break;   //execution starts at this case label
+                    case A_CUE: next.weight = 0.0;break;   
                     case A_RIGHT: next.weight = 0.0;break;
                     case A_LEFT: next.weight = 0.0;break;
                     case A_TOPRIGHT1: next.weight = 0.0;break;
