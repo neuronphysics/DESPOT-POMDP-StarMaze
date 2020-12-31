@@ -8,6 +8,7 @@
 
 using namespace std;
 
+
 namespace despot {
 /* =============================================================================
 * SimpleState class
@@ -95,6 +96,7 @@ void StarMazeProblem::Init() {
                     }
                 }else if(pos_[s]==RIGHT){
                     switch (a) {
+                        //if the rat is at the right arm then the most likely transition will be to stay (absorbing state)
                         case A_CENTER: next.weight = 0.01;break;
                         case A_CUE: next.weight = 0.01;break;   
                         case A_RIGHT: next.weight = 0.93;break;
@@ -165,7 +167,6 @@ void StarMazeProblem::Init() {
                         case A_TOPLEFT2: next.weight = 0.965;break; 
                     }    
                 }
-                transition_probabilities_[s][a].push_back(next);
             }else{
                 //transitions with zero probabilities
                 int total = TOTALTIME*MAZEPOSITIONS ;
@@ -183,8 +184,9 @@ void StarMazeProblem::Init() {
                     case A_TOPLEFT1: next.weight = 0.0;break;
                     case A_TOPLEFT2: next.weight = 0.0;break;
                 }
-                transition_probabilities_[s][a].push_back(next);
+                
             }
+            transition_probabilities_[s][a].push_back(next);
 		}
 	}
     PrintTransitions();
@@ -204,14 +206,37 @@ public:
         
         OptimalStarMazePolicy(const DSPOMDP* model,
                ParticleLowerBound* bound) :
-               DefaultPolicy(model, bound) {
+               DefaultPolicy(model, bound), Starmaze_(static_cast<const StarMazeProblem*>(model)) {
         }
 
         // NOTE: optimal action
         ACT_TYPE Action(const vector<State*>& particles, RandomStreams& streams,
-                        History& history) const {
+            History& history) const {
 
-            return StarMazeProblem::A_CUE;
+            //similar to the tiger problem
+            int count_diff = 0;
+		    for (int i = history.Size() - 1; i >= 0 && history.Action(i) ==StarMazeProblem::A_CUE; i--){
+                if (history.Observation(i) == StarMazeProblem::O_LEFT){
+                    count_diff +=1;
+                }else if (history.Observation(i) == StarMazeProblem::O_TOPLEFT){
+                    count_diff +=2;
+                }else if (history.Observation(i) == StarMazeProblem::O_RIGHT){
+                    count_diff -=1;
+                }else if(history.Observation(i) == StarMazeProblem::O_TOPRIGHT){
+                    count_diff -=2;
+                }
+            }    
+			
+		    if (count_diff >= 2 &&  count_diff < 4)
+			   return StarMazeProblem::A_LEFT;
+            else if (count_diff >= 4)
+			   return StarMazeProblem::A_TOPLEFT1;
+		    else if (count_diff > -4 && count_diff <= -2)
+			   return StarMazeProblem::A_RIGHT;
+            else if (count_diff <= -4)
+			   return StarMazeProblem::A_TOPRIGHT1;
+		    else
+			   return StarMazeProblem::A_CUE;
         }
 };
 
@@ -283,9 +308,6 @@ bool StarMazeProblem::Step(State& state, double rand_num, ACT_TYPE action,
             //break;
 		}
 	}
-    
-    
-
     
     int T =  tim_[state.state_id] + 1;
     int C =  cont_[state.state_id];
