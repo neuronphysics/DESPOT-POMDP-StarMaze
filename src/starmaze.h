@@ -59,16 +59,23 @@ protected:
         mutable MemoryPool<SimpleState> memory_pool_;
 
         std::vector<SimpleState*> states_;
-
+        std::vector<OBS_TYPE> obs_;
+   
         mutable std::vector<ValuedAction> mdp_policy_;
         mutable std::vector<ACT_TYPE> default_action_;
         std::vector<int> pos_; // pos_[s]: position of rat for state s	     
         std::vector<int> cont_; // cont_[s]: context of maze
         std::vector<int> tim_; //tim_[s]: time 
+private:
+      static unsigned long histObs;
+      static const unsigned BitsPerValue = 3;
+      static const unsigned Mask = (1u << BitsPerValue) - 1;
 
 public:
       StarMazeProblem();
       static StarMazeProblem* current_;
+      static void store(unsigned long &n, unsigned x);
+      static unsigned get_max(unsigned long n);
       void Init();
       ~StarMazeProblem(); 
       inline int PosConTimIndicesToStateIndex(int context, int rat_position, int time_step) const {                                                                                                                                                                                                                                                   
@@ -94,7 +101,7 @@ public:
       int NumStates() const;
       /* Returns total number of actions.*/
       inline int NumActions() const{
-         return 8;
+         return MAZEPOSITIONS;
       }
       /* Functions related to beliefs and starting states.*/
       
@@ -105,6 +112,7 @@ public:
       State* CreateStartState(std::string type = "DEFAULT") const;
       Belief* InitialBelief(const State* start, std::string type = "DEFAULT") const;
       double Reward(int s, ACT_TYPE a) const;
+      
       /* Bound-related functions.*/
       double GetMaxReward() const;
       ValuedAction GetBestAction() const;

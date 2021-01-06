@@ -5,7 +5,7 @@
 #include <despot/core/builtin_policy.h>
 #include <despot/core/builtin_upper_bounds.h>
 #include <despot/core/particle_belief.h>
-
+#include <assert.h>
 using namespace std;
 
 
@@ -29,23 +29,49 @@ string SimpleState::text() const {
           return "id=" + to_string(state_id);
 }
 
+
 /* =============================================================================
 * StarMaze class
 * =============================================================================*/
+
 
 
 StarMazeProblem::StarMazeProblem() {
 	current_ = this;
 	Init();
 }
+unsigned long StarMazeProblem::histObs=0;
+/* =============================================================================
+** A function to store observation
+** ============================================================================*/
+// Each value takes 2 bits, so a 64 bit value can hold up to 32 values.
+// Precondition: x >= 0 && x <= Mask
+void StarMazeProblem::store(unsigned long &n, unsigned x) {
+    //store observations as bit number 
+    n = (n << BitsPerValue) | x;
+}
+
+unsigned StarMazeProblem::get_max(unsigned long n){
+    //retrieve the maximum value in n  
+    //To mask out the lower 3 bits you would use 7 (binary 111). With 3 bits you could store values from 0 to 7.
+    unsigned m = 0;
+    for ( ; n; n >>= BitsPerValue) 
+        if ((n & Mask) > m) 
+           m = n & Mask;
+    return m;
+}
+/*===========================================================*/
 void StarMazeProblem::Init() {
 
 
 	SimpleState* state;
 	states_.resize(NumStates());
+    obs_.resize(NumStates());
 	pos_.resize(NumStates());
 	cont_.resize(NumStates());
     tim_.resize(NumStates());
+    double random_number = Random::RANDOM.NextDouble();
+    cout<<"random number:"<<random_number<<endl;
 	for (int position = 0; position < MAZEPOSITIONS; position++) {
 		for (int context = 0; context < CONTEXTTYPE; context++) {
             for (int time=0; time<TOTALTIME; time++){
@@ -55,20 +81,53 @@ void StarMazeProblem::Init() {
 	            pos_[s]    = position;
 			    cont_[s]   = context;
                 tim_[s]    = time;
+                if (pos_[s]==CUE ){
+                   switch (cont_[s]) {
+                        case C_LEFT:
+                            obs_[s] =  (random_number > NOISE) ? O_LEFT : O_NONE; 
+                            break;
+                        case C_TOPLEFT:
+                            obs_[s] =  (random_number > NOISE) ? O_TOPLEFT : O_NONE; 
+                            break;
+                        case C_RIGHT:
+                            obs_[s] =  (random_number > NOISE) ? O_RIGHT : O_NONE; 
+                            break;
+                        case C_TOPRIGHT:
+                            obs_[s] =  (random_number > NOISE) ? O_TOPRIGHT : O_NONE; 
+                            break;
+                    }
+                    cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s] <<" "<<obs_[s]<<endl;
+                }else if (cont_[s]==C_RIGHT && pos_[s]==RIGHT ){
+                    obs_[s] = O_RIGHT ; 
+                    cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s]<<" "<<obs_[s]<<endl;
+                }else if(cont_[s]==C_LEFT && pos_[s]==LEFT ){
+                    obs_[s] = O_LEFT;
+                    cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s]<<" "<<obs_[s]<<endl;
+                }else if(cont_[s]==C_TOPRIGHT && pos_[s]==TOPRIGHT2 ){
+                    obs_[s] =   O_TOPRIGHT ; 
+                    cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s]<<" "<<obs_[s]<<endl;
+                }else if(cont_[s]==C_TOPRIGHT && pos_[s]==TOPLEFT2 ){
+                    obs_[s] =   O_TOPLEFT ; 
+                    cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s]<<" "<<obs_[s]<<endl;
+                }else{
+                    obs_[s] =   O_NONE; 
+                }
             }
 		}
 	}
 
 	// Build transition matrix
     //int TotalNumState=NumStates()-NumStates()/TOTALTIME; //Number of states with allowed transitions
+    
 	transition_probabilities_.resize(NumStates());
+    
 	for (int s = 0; s < NumStates(); s++) {
 		transition_probabilities_[s].resize(NumActions());
-
 		for (int a = 0; a < NumActions(); a++) {
             transition_probabilities_[s][a].clear();
             State next;
             next.state_id = PosConTimIndicesToStateIndex(cont_[s], a, tim_[s] + 1);
+            
             if (tim_[s]<=TIME_STEP_3){
                 
                 if (pos_[s]==CENTER ){
@@ -84,6 +143,7 @@ void StarMazeProblem::Init() {
                         case A_TOPLEFT2: next.weight = 0.005;break;
                     }
                 }else if ( pos_[s]==CUE){
+                    
                     switch (a) {
                         case A_CENTER: next.weight = 0.005;break;
                         case A_CUE: next.weight = 0.965;break;   
@@ -95,6 +155,7 @@ void StarMazeProblem::Init() {
                         case A_TOPLEFT2: next.weight = 0.005;break; 
                     }
                 }else if(pos_[s]==RIGHT){
+                    
                     switch (a) {
                         //if the rat is at the right arm then the most likely transition will be to stay (absorbing state)
                         case A_CENTER: next.weight = 0.01;break;
@@ -110,7 +171,7 @@ void StarMazeProblem::Init() {
                     //if the rat is at the left arm then the most likely transition will be to stay
                     switch (a) {
                         case A_CENTER: next.weight = 0.01;break;
-                        case A_CUE: next.weight = 0.01;break;   
+                        case A_CUE: next.weight = 0.01;break;    
                         case A_RIGHT: next.weight = 0.01;break;
                         case A_LEFT: next.weight = 0.93;break;
                         case A_TOPRIGHT1: next.weight = 0.01;break;
@@ -122,7 +183,7 @@ void StarMazeProblem::Init() {
                     //if the rat is at the topright1, the only likely transition is to go to the topright2  
                     switch (a) {
                         case A_CENTER: next.weight = 0.005;break;
-                        case A_CUE: next.weight = 0.005;break;   
+                        case A_CUE:next.weight = 0.005;break;    
                         case A_RIGHT: next.weight = 0.005;break;
                         case A_LEFT: next.weight = 0.005;break;
                         case A_TOPRIGHT1: next.weight = 0.005;break;
@@ -134,7 +195,7 @@ void StarMazeProblem::Init() {
                     //if the rat is at the topright2, the only likely transition is to stay put 
                     switch (a) {
                         case A_CENTER: next.weight = 0.005;break;
-                        case A_CUE: next.weight = 0.005;break;  
+                        case A_CUE: next.weight = 0.005;break; 
                         case A_RIGHT: next.weight = 0.005;break;
                         case A_LEFT: next.weight = 0.005;break;
                         case A_TOPRIGHT1: next.weight = 0.005;break;
@@ -146,7 +207,7 @@ void StarMazeProblem::Init() {
                     //if the rat is at the topleft1 arm then the most likely to go to topleft2
                     switch (a) {
                         case A_CENTER: next.weight = 0.005;break;
-                        case A_CUE: next.weight = 0.005;break;   
+                        case A_CUE:next.weight = 0.005;break; 
                         case A_RIGHT: next.weight = 0.005;break;
                         case A_LEFT: next.weight = 0.005;break;
                         case A_TOPRIGHT1: next.weight = 0.005;break;
@@ -158,7 +219,7 @@ void StarMazeProblem::Init() {
                     //if the rat is at the toplef2t arm then the most likely transition will be to stay
                     switch (a) {
                         case A_CENTER: next.weight = 0.005;break;
-                        case A_CUE: next.weight = 0.005;break;   
+                        case A_CUE: next.weight = 0.005;break;    
                         case A_RIGHT: next.weight = 0.005;break;
                         case A_LEFT: next.weight = 0.005;break;
                         case A_TOPRIGHT1: next.weight = 0.005;break;
@@ -173,7 +234,6 @@ void StarMazeProblem::Init() {
                 if (next.state_id%total==0){
                     next.state_id -= total;
                 }
-                
                 switch (a) {
                     case A_CENTER: next.weight = 0.0;break;
                     case A_CUE: next.weight = 0.0;break;   
@@ -186,10 +246,10 @@ void StarMazeProblem::Init() {
                 }
                 
             }
-            transition_probabilities_[s][a].push_back(next);
+           transition_probabilities_[s][a].push_back(next);
 		}
 	}
-    PrintTransitions();
+    //PrintTransitions();
 }
 
 StarMazeProblem::~StarMazeProblem() {
@@ -219,21 +279,21 @@ public:
                 if (history.Observation(i) == StarMazeProblem::O_LEFT){
                     count_diff +=1;
                 }else if (history.Observation(i) == StarMazeProblem::O_TOPLEFT){
-                    count_diff +=2;
+                    count_diff +=3;
                 }else if (history.Observation(i) == StarMazeProblem::O_RIGHT){
                     count_diff -=1;
                 }else if(history.Observation(i) == StarMazeProblem::O_TOPRIGHT){
-                    count_diff -=2;
+                    count_diff -=3;
                 }
             }    
 			
 		    if (count_diff >= 2 &&  count_diff < 4)
 			   return StarMazeProblem::A_LEFT;
-            else if (count_diff >= 4)
+            else if (count_diff >= 6)
 			   return StarMazeProblem::A_TOPLEFT1;
 		    else if (count_diff > -4 && count_diff <= -2)
 			   return StarMazeProblem::A_RIGHT;
-            else if (count_diff <= -4)
+            else if (count_diff <= -6)
 			   return StarMazeProblem::A_TOPRIGHT1;
 		    else
 			   return StarMazeProblem::A_CUE;
@@ -250,45 +310,16 @@ bool StarMazeProblem::Step(State& state, double rand_num, ACT_TYPE action,
     SimpleState& simple_state = static_cast < SimpleState& >(state);
     
     bool terminal = false;
-    if (tim_[simple_state.state_id]==TIME_STEP_1){
-        reward = 0.0;
-        obs    = O_NONE;   
-    }
-    if (action==A_CUE){
-        switch (cont_[simple_state.state_id]) {
-            case C_LEFT:
-                obs =  (rand_num > NOISE) ? O_LEFT : O_NONE; 
-                break;
-            case C_TOPLEFT:
-                obs =  (rand_num > NOISE) ? O_TOPLEFT : O_NONE; 
-                break;
-            case C_RIGHT:
-                obs =  (rand_num > NOISE) ? O_RIGHT : O_NONE; 
-                break;
-            case C_TOPRIGHT:
-                obs =  (rand_num > NOISE) ? O_TOPRIGHT : O_NONE; 
-                break;
-        }
-    }     
-    if (tim_[simple_state.state_id]==TIME_STEP_4){//exit condition
-        if ( cont_[simple_state.state_id]==C_RIGHT){
-            if (action!=A_RIGHT){
-               reward = -20;
-            }else {
-               obs    = O_RIGHT;
-            }  
+    reward=0.0;
+    if (tim_[simple_state.state_id]==TIME_STEP_3){//exit condition
+        if ( cont_[simple_state.state_id]==C_RIGHT && action!=A_RIGHT ){
+            reward = -20; 
         }else if(action==A_LEFT && cont_[simple_state.state_id]==C_LEFT){
             reward = 10;
-            obs    = O_LEFT;
-        }else if ( cont_[simple_state.state_id]==C_TOPRIGHT){
-            if (action!=A_TOPRIGHT2){
-               reward = -20;
-            }else {
-               obs    = O_TOPRIGHT;
-            }
+        }else if ( cont_[simple_state.state_id]==C_TOPRIGHT && action!=A_TOPRIGHT2){
+            reward = -20;
         }else if(action==A_TOPLEFT2 && cont_[simple_state.state_id]==C_TOPLEFT){
             reward = 20;
-            obs    = O_TOPLEFT;
         }
         terminal = true;
         return terminal;
@@ -301,25 +332,24 @@ bool StarMazeProblem::Step(State& state, double rand_num, ACT_TYPE action,
 	for (int i = 0; i < distribution.size(); i++) {
 	    const State& next = distribution[i];
 		sum += next.weight;
-		if (sum >= rand_num) { 
+		if (next.weight >= rand_num) { 
 			state.state_id = next.state_id;
-            //rand_num = (sum - rand_num) / next.weight;
-            return terminal;
-            //break;
+            //add new observation to the history
+            store(histObs,obs_[state.state_id]);
+            break;
 		}
 	}
-    
-    int T =  tim_[state.state_id] + 1;
-    int C =  cont_[state.state_id];
-    int P =  pos_[state.state_id];
-    int s = PosConTimIndicesToStateIndex(C, P, T);
-    state.state_id = s;
+    //retrive the maximum value stored in the history 
+    obs = get_max(histObs);
+    //obs = obs_[state.state_id];
     return terminal;
      
 
 }
 
-//**
+/*=======================================
+ *
+ *=======================================*/
 
 
 int StarMazeProblem::NumStates() const {
@@ -329,28 +359,8 @@ int StarMazeProblem::NumStates() const {
 
 double StarMazeProblem::ObsProb(OBS_TYPE obs, const State& state,
     ACT_TYPE action) const {
-      const SimpleState& simple_state = static_cast < const SimpleState& >(state);
-      
-      if (action == A_CUE) {
-          // when the rat at CUE, its observation is correct with probability 0.98
-         
-          return (cont_[simple_state.state_id]==obs-1) ? (1-NOISE) : NOISE;
-     
-          //because he first observation is none and the rest is similar to the context
-      }else if (action == A_LEFT && cont_[simple_state.state_id] == C_LEFT){      
-          return (obs==O_LEFT);
-      }else if (action == A_TOPLEFT2 && cont_[simple_state.state_id] == C_TOPLEFT){
-          return (obs==O_TOPLEFT);
-       }else if (action == A_RIGHT && cont_[simple_state.state_id] == C_RIGHT){
-          return (obs==O_RIGHT);
-      }else if (action == A_TOPRIGHT2 && cont_[simple_state.state_id] == C_TOPRIGHT){
-          return (obs==O_TOPRIGHT);//return 1 if correct and 0 otherwise
-      
-      }else{
-          // when the actions are not A_CUE, the rat does not receive any observations unless rat moves to the arm with the same context then he receives the correct observation.
-          // assume it receives a default observation with probability 1 which is none.
-          return obs==O_NONE;
-      }
+      store(histObs,obs_[state.state_id]);
+      return obs == get_max(histObs);
 }
 void StarMazeProblem::PrintMDPPolicy() const {
 	cout << "MDP (Start)" << endl;
