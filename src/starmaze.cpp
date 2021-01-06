@@ -70,8 +70,7 @@ void StarMazeProblem::Init() {
 	pos_.resize(NumStates());
 	cont_.resize(NumStates());
     tim_.resize(NumStates());
-    double random_number = Random::RANDOM.NextDouble();
-    cout<<"random number:"<<random_number<<endl;
+
 	for (int position = 0; position < MAZEPOSITIONS; position++) {
 		for (int context = 0; context < CONTEXTTYPE; context++) {
             for (int time=0; time<TOTALTIME; time++){
@@ -82,6 +81,8 @@ void StarMazeProblem::Init() {
 			    cont_[s]   = context;
                 tim_[s]    = time;
                 if (pos_[s]==CUE ){
+                   double random_number = Random::RANDOM.NextDouble();
+                   cout<<"random number:"<<random_number<<endl;
                    switch (cont_[s]) {
                         case C_LEFT:
                             obs_[s] =  (random_number > NOISE) ? O_LEFT : O_NONE; 
@@ -99,19 +100,20 @@ void StarMazeProblem::Init() {
                     cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s] <<" "<<obs_[s]<<endl;
                 }else if (cont_[s]==C_RIGHT && pos_[s]==RIGHT ){
                     obs_[s] = O_RIGHT ; 
-                    cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s]<<" "<<obs_[s]<<endl;
+                    //cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s]<<" "<<obs_[s]<<endl;
                 }else if(cont_[s]==C_LEFT && pos_[s]==LEFT ){
                     obs_[s] = O_LEFT;
-                    cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s]<<" "<<obs_[s]<<endl;
+                    //cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s]<<" "<<obs_[s]<<endl;
                 }else if(cont_[s]==C_TOPRIGHT && pos_[s]==TOPRIGHT2 ){
                     obs_[s] =   O_TOPRIGHT ; 
-                    cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s]<<" "<<obs_[s]<<endl;
+                    //cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s]<<" "<<obs_[s]<<endl;
                 }else if(cont_[s]==C_TOPRIGHT && pos_[s]==TOPLEFT2 ){
                     obs_[s] =   O_TOPLEFT ; 
-                    cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s]<<" "<<obs_[s]<<endl;
+                    //cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s]<<" "<<obs_[s]<<endl;
                 }else{
                     obs_[s] =   O_NONE; 
                 }
+
             }
 		}
 	}
@@ -305,20 +307,20 @@ public:
  * Deterministic simulative model
  * ==============================*/
 
-bool StarMazeProblem::Step(State& state, double rand_num, ACT_TYPE action,
+bool StarMazeProblem::Step(State& s, double rand_num, ACT_TYPE action,
         double& reward, OBS_TYPE& obs) const {
-    SimpleState& simple_state = static_cast < SimpleState& >(state);
+    SimpleState& state = static_cast < SimpleState& >(s);
     
     bool terminal = false;
     reward=0.0;
-    if (tim_[simple_state.state_id]==TIME_STEP_3){//exit condition
-        if ( cont_[simple_state.state_id]==C_RIGHT && action!=A_RIGHT ){
+    if (tim_[state.state_id]==TIME_STEP_3){//exit condition
+        if ( cont_[state.state_id]==C_RIGHT && action!=A_RIGHT ){
             reward = -20; 
-        }else if(action==A_LEFT && cont_[simple_state.state_id]==C_LEFT){
+        }else if(action==A_LEFT && cont_[state.state_id]==C_LEFT){
             reward = 10;
-        }else if ( cont_[simple_state.state_id]==C_TOPRIGHT && action!=A_TOPRIGHT2){
+        }else if ( cont_[state.state_id]==C_TOPRIGHT && action!=A_TOPRIGHT2){
             reward = -20;
-        }else if(action==A_TOPLEFT2 && cont_[simple_state.state_id]==C_TOPLEFT){
+        }else if(action==A_TOPLEFT2 && cont_[state.state_id]==C_TOPLEFT){
             reward = 20;
         }
         terminal = true;
@@ -335,13 +337,13 @@ bool StarMazeProblem::Step(State& state, double rand_num, ACT_TYPE action,
 		if (next.weight >= rand_num) { 
 			state.state_id = next.state_id;
             //add new observation to the history
-            store(histObs,obs_[state.state_id]);
+            //store(histObs,obs_[state.state_id]);
             break;
 		}
 	}
     //retrive the maximum value stored in the history 
-    obs = get_max(histObs);
-    //obs = obs_[state.state_id];
+    //obs = get_max(histObs);
+    obs = obs_[state.state_id];
     return terminal;
      
 
@@ -359,8 +361,9 @@ int StarMazeProblem::NumStates() const {
 
 double StarMazeProblem::ObsProb(OBS_TYPE obs, const State& state,
     ACT_TYPE action) const {
-      store(histObs,obs_[state.state_id]);
-      return obs == get_max(histObs);
+      //store(histObs,obs_[state.state_id]);
+      //return obs == get_max(histObs);
+      return obs==obs_[state.state_id];
 }
 void StarMazeProblem::PrintMDPPolicy() const {
 	cout << "MDP (Start)" << endl;
@@ -698,7 +701,5 @@ int StarMazeProblem::NumActiveParticles() const {
 int StarMazeProblem::GetAction(const State& state) const {
 	return default_action_[GetIndex(&state)];
 }
-
-
 
 }// namespace despot
