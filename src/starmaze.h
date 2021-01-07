@@ -24,7 +24,7 @@ public:
 
 
 /* =============================================================================
- * SimpleRockSample class
+ * StarMazeProblem class
  * =============================================================================*/
 
 class StarMazeProblem : public DSPOMDP,
@@ -67,6 +67,7 @@ protected:
         std::vector<int> cont_; // cont_[s]: context of maze
         std::vector<int> tim_; //tim_[s]: time 
 private:
+      // a few extra function I added to track observations in a trial
       static unsigned long histObs;
       static const unsigned BitsPerValue = 3;
       static const unsigned Mask = (1u << BitsPerValue) - 1;
