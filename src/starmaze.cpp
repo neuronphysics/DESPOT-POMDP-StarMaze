@@ -40,7 +40,7 @@ StarMazeProblem::StarMazeProblem() {
 	current_ = this;
 	Init();
 }
-unsigned long StarMazeProblem::histObs=0;
+unsigned long StarMazeProblem::histObs = 0;
 /* =============================================================================
 ** A function to store observation
 ** ============================================================================*/
@@ -313,7 +313,7 @@ bool StarMazeProblem::Step(State& s, double rand_num, ACT_TYPE action,
     
     bool terminal = false;
     reward=0.0;
-    if (tim_[state.state_id]==TIME_STEP_3){//exit condition
+    if (tim_[state.state_id]==TIME_STEP_4){//exit condition
         if ( cont_[state.state_id]==C_RIGHT && action!=A_RIGHT ){
             reward = -20; 
         }else if(action==A_LEFT && cont_[state.state_id]==C_LEFT){
@@ -337,12 +337,10 @@ bool StarMazeProblem::Step(State& s, double rand_num, ACT_TYPE action,
 		if (next.weight >= rand_num) { 
 			state.state_id = next.state_id;
             //add new observation to the history
-            //store(histObs,obs_[state.state_id]);
             break;
 		}
 	}
     //retrive the maximum value stored in the history 
-    //obs = get_max(histObs);
     obs = obs_[state.state_id];
     return terminal;
      
@@ -361,8 +359,6 @@ int StarMazeProblem::NumStates() const {
 
 double StarMazeProblem::ObsProb(OBS_TYPE obs, const State& state,
     ACT_TYPE action) const {
-      //store(histObs,obs_[state.state_id]);
-      //return obs == get_max(histObs);
       return obs==obs_[state.state_id];
 }
 void StarMazeProblem::PrintMDPPolicy() const {
@@ -635,19 +631,20 @@ void StarMazeProblem::PrintBelief(const Belief& belief, ostream& out) const {
 void StarMazeProblem::PrintObs(const State& state, OBS_TYPE obs, ostream& out) const {
         switch (obs) {
             case O_NONE:
-                out << "None" << endl;
+                out << "None " << endl;
+                 
                 break;
             case O_LEFT:
-                out << "small reward at left arm" << endl;
+                out << "small reward at left arm "  << endl;
                 break;
             case O_TOPLEFT:
-                out << "larg reward at the end of top-left arm" << endl;
+                out << "larg reward at the end of top-left arm "  << endl;
                 break;
             case O_RIGHT:
-                out << "Shock if at the last time step rat doesn't reach right arm" << endl;
+                out << "Shock if at the last time step rat doesn't reach right arm " << endl;
                 break;
             case O_TOPRIGHT:
-                out << "Shock if at the last time step rat doesn't reach to the end of top-right arm" << endl;
+                out << "Shock if at the last time step rat doesn't reach to the end of top-right arm "  << endl;
                 break;
         }
 }
