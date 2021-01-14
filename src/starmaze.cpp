@@ -107,7 +107,7 @@ void StarMazeProblem::Init() {
                 }else if(cont_[s]==C_TOPRIGHT && pos_[s]==TOPRIGHT2 ){
                     obs_[s] =   O_TOPRIGHT ; 
                     //cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s]<<" "<<obs_[s]<<endl;
-                }else if(cont_[s]==C_TOPRIGHT && pos_[s]==TOPLEFT2 ){
+                }else if(cont_[s]==C_TOPLEFT && pos_[s]==TOPLEFT2 ){
                     obs_[s] =   O_TOPLEFT ; 
                     //cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s]<<" "<<obs_[s]<<endl;
                 }else{
