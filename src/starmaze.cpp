@@ -6,8 +6,9 @@
 #include <despot/core/builtin_upper_bounds.h>
 #include <despot/core/particle_belief.h>
 #include <assert.h>
-using namespace std;
 
+
+using namespace std;
 
 namespace despot {
 /* =============================================================================
@@ -71,8 +72,8 @@ void StarMazeProblem::Init() {
 	cont_.resize(NumStates());
     tim_.resize(NumStates());
 
-	for (int position = 0; position < MAZEPOSITIONS; position++) {
-		for (int context = 0; context < CONTEXTTYPE; context++) {
+	for (int context = 0; context < CONTEXTTYPE; context++) {
+		for (int position = 0; position < MAZEPOSITIONS; position++) {
             for (int time=0; time<TOTALTIME; time++){
 			    int s = PosConTimIndicesToStateIndex(context, position, time);
 			    state      = new SimpleState(s);
@@ -97,7 +98,7 @@ void StarMazeProblem::Init() {
                             obs_[s] =  (random_number > NOISE) ? O_TOPRIGHT : O_NONE; 
                             break;
                     }
-                    cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s] <<" "<<obs_[s]<<endl;
+                    //cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s] <<" "<<obs_[s]<<endl;
                 }else if (cont_[s]==C_RIGHT && pos_[s]==RIGHT ){
                     obs_[s] = O_RIGHT ; 
                     //cout<< pos_[s]<<" "<<cont_[s]<<" "<<tim_[s]<<" "<<obs_[s]<<endl;
@@ -122,14 +123,81 @@ void StarMazeProblem::Init() {
     //int TotalNumState=NumStates()-NumStates()/TOTALTIME; //Number of states with allowed transitions
     
 	transition_probabilities_.resize(NumStates());
+    //define reward table
+    reward_.resize(NumStates());
     
 	for (int s = 0; s < NumStates(); s++) {
+        reward_[s].resize(NumActions());
 		transition_probabilities_[s].resize(NumActions());
 		for (int a = 0; a < NumActions(); a++) {
             transition_probabilities_[s][a].clear();
             State next;
             next.state_id = PosConTimIndicesToStateIndex(cont_[s], a, tim_[s] + 1);
-            
+            //setting reward table values
+            reward_[s][a]=0.0;
+            if (tim_[s]>=TIME_STEP_3){
+                if ( cont_[s]==C_RIGHT ){
+                    switch (pos_[s]) {
+                        case CENTER: reward_[s][a]=-40.0;break;
+                        case CUE: reward_[s][a]=-40.0;break;   
+                        case RIGHT: reward_[s][a]=0.0;break;
+                        case LEFT: reward_[s][a]=-40.0;break;
+                        case TOPRIGHT1: reward_[s][a]=-40.0;break;
+                        case TOPRIGHT2: reward_[s][a]=-40.0;break;
+                        case TOPLEFT1: reward_[s][a]=-40.0;break;
+                        case TOPLEFT2: reward_[s][a]=-40.0;break;
+                    }
+                    if (tim_[s]==TIME_STEP_4 && a!=A_RIGHT ){
+                        reward_[s][a]=-40.0;
+                    }
+                }else if(cont_[s]==C_LEFT){
+                    if (a==A_LEFT){
+                        switch (pos_[s]) {
+                            case CENTER: reward_[s][a]=10.0;break;
+                            case CUE: reward_[s][a]=10.0;break;   
+                            case RIGHT: reward_[s][a]=0.0;break;
+                            case LEFT: reward_[s][a]=10.0;break;
+                            case TOPRIGHT1: reward_[s][a]=0.0;break;
+                            case TOPRIGHT2: reward_[s][a]=0.0;break;
+                            case TOPLEFT1: reward_[s][a]=0.0;break;
+                            case TOPLEFT2: reward_[s][a]=0.0;break;
+                       }
+                    }  
+                }else if (tim_[s]==TIME_STEP_3 &&  cont_[s]==C_TOPRIGHT ){
+                    if (a==A_TOPRIGHT2 ){
+                        switch (pos_[s]) {
+                            case CENTER: reward_[s][a]=-40.0;break;
+                            case CUE: reward_[s][a]=-40.0;break;   
+                            case RIGHT: reward_[s][a]=-40.0;break;
+                            case LEFT: reward_[s][a]=-40.0;break;
+                            case TOPRIGHT1: reward_[s][a]=0.0;break;
+                            case TOPRIGHT2: reward_[s][a]=0.0;break;
+                            case TOPLEFT1: reward_[s][a]=-40.0;break;
+                            case TOPLEFT2: reward_[s][a]=-40.0;break;
+                       }
+                    }else{
+                        reward_[s][a]=-40.0;
+                    }
+                }else if (tim_[s]==TIME_STEP_4 &&cont_[s]==C_TOPRIGHT ){
+                    if (a!=A_TOPRIGHT2){
+                        reward_[s][a]=-40.0;
+                    }
+                }else if(cont_[s]==C_TOPLEFT){
+                    if (a==A_TOPLEFT2){
+                        switch (pos_[s]) {
+                            case CENTER: reward_[s][a]=0.0;break;
+                            case CUE: reward_[s][a]=0.0;break;   
+                            case RIGHT: reward_[s][a]=0.0;break;
+                            case LEFT: reward_[s][a]=0.0;break;
+                            case TOPRIGHT1: reward_[s][a]=0.0;break;
+                            case TOPRIGHT2: reward_[s][a]=0.0;break;
+                            case TOPLEFT1: reward_[s][a]=20.0;break;
+                            case TOPLEFT2: reward_[s][a]=20.0;break;
+                       }
+                    }  
+                }
+            }
+            //cout<<"position: "<<pos_[s]<<", context: "<<cont_[s]<<", time: "<<tim_[s]<<", action: "<<a<<", reward: "<<reward_[s][a]<<endl;
             if (tim_[s]<=TIME_STEP_3){
                 
                 if (pos_[s]==CENTER ){
@@ -312,21 +380,13 @@ bool StarMazeProblem::Step(State& s, double rand_num, ACT_TYPE action,
     SimpleState& state = static_cast < SimpleState& >(s);
     
     bool terminal = false;
-    reward=0.0;
+    reward=reward_[state.state_id][action];
     if (tim_[state.state_id]==TIME_STEP_4){//exit condition
-        if ( cont_[state.state_id]==C_RIGHT && action!=A_RIGHT ){
-            reward = -20; 
-        }else if(action==A_LEFT && cont_[state.state_id]==C_LEFT){
-            reward = 10;
-        }else if ( cont_[state.state_id]==C_TOPRIGHT && action!=A_TOPRIGHT2){
-            reward = -20;
-        }else if(action==A_TOPLEFT2 && cont_[state.state_id]==C_TOPLEFT){
-            reward = 20;
-        }
+        
         terminal = true;
         return terminal;
     }
-           
+              
     
     const vector<State>& distribution =
 		   transition_probabilities_[state.state_id][action];
@@ -334,7 +394,7 @@ bool StarMazeProblem::Step(State& s, double rand_num, ACT_TYPE action,
 	for (int i = 0; i < distribution.size(); i++) {
 	    const State& next = distribution[i];
 		sum += next.weight;
-		if (next.weight >= rand_num) { 
+		if (sum >= rand_num) {
 			state.state_id = next.state_id;
             //add new observation to the history
             break;
@@ -426,25 +486,8 @@ Belief* StarMazeProblem::InitialBelief(const State* start, string type) const {
 * ========================*/
 double StarMazeProblem::Reward(int s, ACT_TYPE action) const {
     const SimpleState* simple_state = states_[s];
-	double reward = 0;
-    
-	if (action == A_LEFT)  {
-        if ( cont_[simple_state->state_id] ==C_LEFT && (pos_[simple_state->state_id]==CENTER || pos_[simple_state->state_id]==CUE)){
-		   reward = 10;
-        }
-	} else if  (action == A_TOPLEFT2 ){
-        if (cont_[simple_state->state_id]==C_TOPLEFT&& pos_[simple_state->state_id]==TOPLEFT1){
-		   reward = 20;
-        }
-	} else if  (action != A_TOPRIGHT2){
-        if (tim_[simple_state->state_id] == TIME_STEP_4 && cont_[simple_state->state_id] ==C_TOPRIGHT){
-		   reward = -20;
-        }
-	}else if  (action != A_RIGHT){
-         if (tim_[simple_state->state_id] == TIME_STEP_4 && cont_[simple_state->state_id] ==C_RIGHT){
-		    reward = -20;
-         }
-	}
+    double reward=reward=reward_[simple_state->state_id][action];
+	
 	return reward;
 }
 

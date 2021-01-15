@@ -66,6 +66,7 @@ protected:
         std::vector<int> pos_; // pos_[s]: position of rat for state s	     
         std::vector<int> cont_; // cont_[s]: context of maze
         std::vector<int> tim_; //tim_[s]: time 
+        std::vector<std::vector<double>> reward_;
 private:
       // a few extra function I added to track observations in a trial
       static unsigned long histObs;
