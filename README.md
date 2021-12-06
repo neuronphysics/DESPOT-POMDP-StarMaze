@@ -1,1 +1,1 @@
-# DESPOT-StareMaze
+# DESPOT-StarMaze
